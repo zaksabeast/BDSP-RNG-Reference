@@ -1,4 +1,5 @@
 mod shiny;
+mod timeline;
 mod utils;
 mod xorshift;
 
@@ -59,6 +60,15 @@ enum SubCommand {
         #[structopt(long = "s3", parse(try_from_str = utils::parse_hex))]
         new_state3: u32,
     },
+    /// Shows the character animation timeline, assuming no nearby npcs
+    Timeline {
+        /// Number of seconds the timeline should last
+        #[structopt(short, long)]
+        duration: u32,
+        /// Include all rng calls, including no blinks and idle fidgets
+        #[structopt(short, long)]
+        include_all: bool,
+    },
 }
 
 fn main() {
@@ -83,6 +93,13 @@ fn main() {
             Some(advances) => println!("Found states in {} advances", advances + offset),
             None => println!("Could not find provided states"),
         },
+        Some(SubCommand::Timeline {
+            duration,
+            include_all,
+        }) => {
+            let animation_timeline = timeline::create_timeline(&mut rng, duration, include_all);
+            println!("Animation timeline:\n{}", animation_timeline);
+        }
         None => { /* no-op */ }
     }
 
