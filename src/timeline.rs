@@ -1,12 +1,40 @@
 use crate::xorshift::Xorshift;
 use std::fmt;
 
+struct Seconds(u32);
+
+struct Frames(f64);
+
+impl From<Seconds> for Frames {
+    fn from(seconds: Seconds) -> Self {
+        Self(f64::from(seconds.0 * 30))
+    }
+}
+
+impl From<Frames> for Seconds {
+    fn from(frames: Frames) -> Self {
+        // Not amazing, but casting should have the intended effect
+        Self((frames.0 / 30.0) as u32)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Fidget {
     Idle,
     LookAround,
     TapFoot,
     RaiseArms,
+}
+
+impl Fidget {
+    fn get_frames(&self) -> u32 {
+        match self {
+            Fidget::Idle => 144,       // 5 seconds - 0.2 seconds
+            Fidget::LookAround => 109, // 3.83333349 - 0.2 seconds
+            Fidget::TapFoot => 96,     // 3.4000001 - 0.2 seconds
+            Fidget::RaiseArms => 119,  // 4.16666698 - 0.2 seconds
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -33,11 +61,6 @@ impl fmt::Display for Animation {
             }
         }
     }
-}
-
-struct FidgetDuration {
-    duration: u32,
-    fidget: Fidget,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -77,7 +100,7 @@ impl fmt::Display for Timeline {
     }
 }
 
-fn get_next_fidget_cycle(rng: &mut Xorshift, previous_fidget: Fidget) -> Fidget {
+fn handle_fidget(rng: &mut Xorshift, previous_fidget: Fidget) -> Fidget {
     match (previous_fidget, rng.next_max(3)) {
         (Fidget::Idle, 0) => Fidget::LookAround,
         (Fidget::Idle, 1) => Fidget::TapFoot,
@@ -94,42 +117,30 @@ fn get_next_fidget_cycle(rng: &mut Xorshift, previous_fidget: Fidget) -> Fidget 
     }
 }
 
-fn handle_fidget(rng: &mut Xorshift, previous_fidget: Fidget) -> FidgetDuration {
-    let next_fidget = get_next_fidget_cycle(rng, previous_fidget);
-    let duration = if next_fidget == Fidget::Idle { 25 } else { 20 };
-
-    FidgetDuration {
-        duration,
-        fidget: next_fidget,
-    }
-}
-
 pub fn create_timeline(rng: &mut Xorshift, duration: u32, include_all_rng_calls: bool) -> Timeline {
     let mut result = vec![];
-    // Each cycle is 0.2 seconds (1/5 second)
-    let last_cycle = duration * 5;
-    let mut next_fidget_cycle = 25;
+    let last_frame = duration * 30;
     let mut current_fidget = Fidget::Idle;
+    let mut next_fidget_frame = current_fidget.get_frames();
 
-    for current_cycle in 1..=last_cycle {
-        // A fidget rng call is made in 5 seconds (25 cycles)
-        // if the character is idling and 0.2 seconds (1 cycle) if not
-        if current_cycle == next_fidget_cycle {
-            let fidget_result = handle_fidget(rng, current_fidget);
-            current_fidget = fidget_result.fidget;
-            next_fidget_cycle += fidget_result.duration;
+    for current_frame in 1..=last_frame {
+        // A fidget rng call is made in 5 seconds
+        // if the character is idling and 0.2 seconds
+        if current_frame == next_fidget_frame {
+            current_fidget = handle_fidget(rng, current_fidget);
+            next_fidget_frame += current_fidget.get_frames();
 
-            if fidget_result.fidget != Fidget::Idle || include_all_rng_calls {
+            if current_fidget != Fidget::Idle || include_all_rng_calls {
                 result.push(AnimationTime {
-                    animation: Animation::Fidget(fidget_result.fidget),
-                    seconds: f64::from(current_cycle) / 5.0,
+                    animation: Animation::Fidget(current_fidget),
+                    seconds: f64::from(current_frame) / 30.0,
                     rng_state: rng.get_state(),
                 });
             }
         }
 
-        // Each blink is 1 second or 5 cycles
-        if current_cycle % 5 == 0 {
+        // Each blink is 1 second
+        if current_frame % 30 == 0 {
             // Lucas (and probably other npcs) have 16 blink patterns
             // Only patterns 0 and 1 have animations
             // 2-15 do not hav animations
@@ -142,7 +153,7 @@ pub fn create_timeline(rng: &mut Xorshift, duration: u32, include_all_rng_calls:
 
             if blink != Blink::NoBlink || include_all_rng_calls {
                 result.push(AnimationTime {
-                    seconds: f64::from(current_cycle) / 5.0,
+                    seconds: f64::from(current_frame) / 30.0,
                     animation: Animation::Blink(blink),
                     rng_state: rng.get_state(),
                 });
