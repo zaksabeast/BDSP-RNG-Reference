@@ -65,6 +65,9 @@ enum SubCommand {
         /// Number of seconds the timeline should last
         #[structopt(short, long)]
         duration: u32,
+        /// Frame offset
+        #[structopt(short, long)]
+        offset: u32,
         /// Include all rng calls, including no blinks and idle fidgets
         #[structopt(short, long)]
         include_all: bool,
@@ -95,9 +98,11 @@ fn main() {
         },
         Some(SubCommand::Timeline {
             duration,
+            offset,
             include_all,
         }) => {
-            let animation_timeline = timeline::create_timeline(&mut rng, duration, include_all);
+            let animation_timeline =
+                timeline::create_timeline(&mut rng, duration, offset, include_all);
             println!("Animation timeline:\n{}", animation_timeline);
         }
         None => { /* no-op */ }

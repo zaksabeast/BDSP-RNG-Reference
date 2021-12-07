@@ -1,21 +1,23 @@
 use crate::xorshift::Xorshift;
 use std::fmt;
 
-struct Seconds(u32);
+type Seconds = f64;
 
-struct Frames(f64);
+type Frames = u32;
 
-impl From<Seconds> for Frames {
-    fn from(seconds: Seconds) -> Self {
-        Self(f64::from(seconds.0 * 30))
-    }
+const ONE_SECOND: Frames = 30u32;
+
+fn u32_to_seconds(seconds: u32) -> Seconds {
+    Seconds::from(seconds)
 }
 
-impl From<Frames> for Seconds {
-    fn from(frames: Frames) -> Self {
-        // Not amazing, but casting should have the intended effect
-        Self((frames.0 / 30.0) as u32)
-    }
+fn seconds_to_frames(seconds: Seconds) -> Frames {
+    // Not amazing, but casting should have the intended effect
+    (seconds * 30.0) as Frames
+}
+
+fn frames_to_seconds(frames: Frames) -> Seconds {
+    Seconds::from(frames) / 30.0
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -117,13 +119,18 @@ fn handle_fidget(rng: &mut Xorshift, previous_fidget: Fidget) -> Fidget {
     }
 }
 
-pub fn create_timeline(rng: &mut Xorshift, duration: u32, include_all_rng_calls: bool) -> Timeline {
+pub fn create_timeline(
+    rng: &mut Xorshift,
+    duration: u32,
+    offset: u32,
+    include_all_rng_calls: bool,
+) -> Timeline {
     let mut result = vec![];
-    let last_frame = duration * 30;
+    let last_frame = seconds_to_frames(u32_to_seconds(duration));
     let mut current_fidget = Fidget::Idle;
     let mut next_fidget_frame = current_fidget.get_frames();
 
-    for current_frame in 1..=last_frame {
+    for current_frame in offset..=last_frame {
         // A fidget rng call is made in 5 seconds
         // if the character is idling and 0.2 seconds
         if current_frame == next_fidget_frame {
@@ -133,14 +140,14 @@ pub fn create_timeline(rng: &mut Xorshift, duration: u32, include_all_rng_calls:
             if current_fidget != Fidget::Idle || include_all_rng_calls {
                 result.push(AnimationTime {
                     animation: Animation::Fidget(current_fidget),
-                    seconds: f64::from(current_frame) / 30.0,
+                    seconds: frames_to_seconds(current_frame),
                     rng_state: rng.get_state(),
                 });
             }
         }
 
         // Each blink is 1 second
-        if current_frame % 30 == 0 {
+        if current_frame % ONE_SECOND == 0 {
             // Lucas (and probably other npcs) have 16 blink patterns
             // Only patterns 0 and 1 have animations
             // 2-15 do not hav animations
@@ -153,7 +160,7 @@ pub fn create_timeline(rng: &mut Xorshift, duration: u32, include_all_rng_calls:
 
             if blink != Blink::NoBlink || include_all_rng_calls {
                 result.push(AnimationTime {
-                    seconds: f64::from(current_frame) / 30.0,
+                    seconds: frames_to_seconds(current_frame),
                     animation: Animation::Blink(blink),
                     rng_state: rng.get_state(),
                 });
