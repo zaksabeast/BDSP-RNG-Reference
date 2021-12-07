@@ -76,7 +76,7 @@ impl fmt::Display for AnimationTime {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Seconds: {}, Animation: {}, RNG state: [{:08x}, {:08x}, {:08x}, {:08x}]",
+            "Seconds: {:.2}, Animation: {}, RNG state: [{:08x}, {:08x}, {:08x}, {:08x}]",
             self.seconds,
             self.animation,
             self.rng_state[0],
