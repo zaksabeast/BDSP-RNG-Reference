@@ -31,7 +31,7 @@ pub enum Fidget {
 impl Fidget {
     fn get_frames(&self) -> u32 {
         match self {
-            Fidget::Idle => 144,       // 5 seconds - 0.2 seconds
+            Fidget::Idle => 150,       // 5 seconds
             Fidget::LookAround => 109, // 3.83333349 - 0.2 seconds
             Fidget::TapFoot => 96,     // 3.4000001 - 0.2 seconds
             Fidget::RaiseArms => 119,  // 4.16666698 - 0.2 seconds
