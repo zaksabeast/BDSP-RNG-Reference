@@ -5,8 +5,6 @@ type Seconds = f64;
 
 type Frames = u32;
 
-const ONE_SECOND: Frames = 30u32;
-
 fn u32_to_seconds(seconds: u32) -> Seconds {
     Seconds::from(seconds)
 }
@@ -44,6 +42,12 @@ pub enum Blink {
     Single,
     Double,
     NoBlink,
+}
+
+impl Blink {
+    fn get_frames() -> Frames {
+        30
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -129,6 +133,7 @@ pub fn create_timeline(
     let last_frame = seconds_to_frames(u32_to_seconds(duration));
     let mut current_fidget = Fidget::Idle;
     let mut next_fidget_frame = current_fidget.get_frames();
+    let mut next_blink_frame = Blink::get_frames();
 
     for current_frame in offset..=last_frame {
         // A fidget rng call is made in 5 seconds
@@ -146,8 +151,7 @@ pub fn create_timeline(
             }
         }
 
-        // Each blink is 1 second
-        if current_frame % ONE_SECOND == 0 {
+        if current_frame == next_blink_frame {
             // Lucas (and probably other npcs) have 16 blink patterns
             // Only patterns 0 and 1 have animations
             // 2-15 do not hav animations
@@ -165,6 +169,8 @@ pub fn create_timeline(
                     rng_state: rng.get_state(),
                 });
             }
+
+            next_blink_frame += Blink::get_frames();
         }
     }
 
