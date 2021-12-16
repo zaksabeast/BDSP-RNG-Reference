@@ -1,5 +1,6 @@
 use crate::xorshift::Xorshift;
 use std::fmt;
+use std::str::FromStr;
 
 type Seconds = f64;
 
@@ -37,6 +38,9 @@ impl Fidget {
     }
 }
 
+// This will allow NoBlink to exist,
+// which is a better UX than "None"
+#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Blink {
     Single,
@@ -54,6 +58,23 @@ impl Blink {
 pub enum Animation {
     Fidget(Fidget),
     Blink(Blink), // Handled outside of the others
+}
+
+impl FromStr for Animation {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Idle" => Ok(Animation::Fidget(Fidget::Idle)),
+            "LookAround" => Ok(Animation::Fidget(Fidget::LookAround)),
+            "TapFoot" => Ok(Animation::Fidget(Fidget::TapFoot)),
+            "RaiseArms" => Ok(Animation::Fidget(Fidget::RaiseArms)),
+            "Single" => Ok(Animation::Blink(Blink::Single)),
+            "Double" => Ok(Animation::Blink(Blink::Double)),
+            "NoBlink" => Ok(Animation::Blink(Blink::NoBlink)),
+            _ => Err(format!("{} is not a valid Animation", s)),
+        }
+    }
 }
 
 impl fmt::Display for Animation {
@@ -92,6 +113,15 @@ impl fmt::Display for AnimationTime {
 }
 
 pub struct Timeline(Vec<AnimationTime>);
+
+impl Timeline {
+    pub fn get_animations(&self) -> Vec<Animation> {
+        self.0
+            .iter()
+            .map(|animation_time| animation_time.animation)
+            .collect()
+    }
+}
 
 impl fmt::Display for Timeline {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

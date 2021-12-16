@@ -72,6 +72,24 @@ enum SubCommand {
         #[structopt(short, long)]
         include_all: bool,
     },
+    /// Finds a timline, assuming no nearby npcs
+    FindTimeline {
+        /// Number of seconds the timeline should last
+        #[structopt(short, long)]
+        duration: u32,
+        /// Frame offset
+        #[structopt(short, long)]
+        offset: u32,
+        /// The lower advance limit to search
+        #[structopt(long)]
+        min: usize,
+        /// The upper advance limit to search
+        #[structopt(long)]
+        max: usize,
+        /// The timeline to find
+        #[structopt(short, long)]
+        timeline: Vec<timeline::Animation>,
+    },
 }
 
 fn main() {
@@ -104,6 +122,32 @@ fn main() {
             let animation_timeline =
                 timeline::create_timeline(&mut rng, duration, offset, include_all);
             println!("Animation timeline:\n{}", animation_timeline);
+        }
+        Some(SubCommand::FindTimeline {
+            duration,
+            offset,
+            min,
+            max,
+            timeline,
+        }) => {
+            rng.advance(min);
+
+            for advance in min..max {
+                let mut copied_rng = rng;
+                let animations =
+                    timeline::create_timeline(&mut copied_rng, duration, offset, false)
+                        .get_animations();
+
+                let rng_state = copied_rng.get_state();
+                if animations == timeline {
+                    println!(
+                        "Found timeline at advance {} with state {:x} {:x} {:x} {:x}",
+                        advance, rng_state[0], rng_state[1], rng_state[2], rng_state[3]
+                    );
+                }
+
+                rng.next();
+            }
         }
         None => { /* no-op */ }
     }
